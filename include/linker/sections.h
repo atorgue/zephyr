@@ -56,6 +56,8 @@
 #define _CCM_BSS_SECTION_NAME		ccm_bss
 #define _CCM_NOINIT_SECTION_NAME	ccm_noinit
 
+#define _OPENAMP_RSC_TABLE_SECTION_NAME	.resource_table
+
 #endif
 
 #include <linker/section_tags.h>

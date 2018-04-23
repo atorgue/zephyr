@@ -50,3 +50,9 @@
 		KEEP(*(SORT_BY_NAME(".net_l2.init*")))
 		__net_l2_end = .;
 	} GROUP_LINK_IN(ROMABLE_REGION)
+
+	SECTION_PROLOGUE(.resource_table, (OPTIONAL), SUBALIGN(4))
+    	{
+    		KEEP(*(.resource_table*))
+    	} GROUP_LINK_IN(ROMABLE_REGION)
+

@@ -23,6 +23,7 @@
 #define __ccm_data_section _GENERIC_SECTION(_CCM_DATA_SECTION_NAME)
 #define __ccm_bss_section _GENERIC_SECTION(_CCM_BSS_SECTION_NAME)
 #define __ccm_noinit_section _GENERIC_SECTION(_CCM_NOINIT_SECTION_NAME)
+#define __data_openamp_rsc_section _GENERIC_SECTION(_OPENAMP_RSC_TABLE_SECTION_NAME)
 #endif /* CONFIG_ARM */
 
 #endif /* !_ASMLANGUAGE */
