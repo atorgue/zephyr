@@ -8,7 +8,10 @@
 #include <ipm.h>
 
 #include <openamp/open_amp.h>
+#include <openamp/remoteproc_virtio.h>
 #include "platform.h"
+#include "resource_table.h"
+#include "metal/device.h"
 
 #if 0
 #define DEBUG_TRACE(...) printk(...)
@@ -18,104 +21,80 @@
 
 static K_SEM_DEFINE(data_sem, 0, 1);
 static struct device *ipm_handle = NULL;
+extern struct metal_device shm_device;
+static unsigned int vring_notifyid;
 
 static void platform_ipm_callback(void *context, u32_t id, volatile void *data)
 {
+	vring_notifyid = id ? VRING_RX_ID : VRING_TX_ID;
 	k_sem_give(&data_sem);
 }
 
-static int enable_interrupt(struct proc_intr *intr)
-{
-	DEBUG_TRACE("->%s()\n", __func__);
-	return ipm_set_enabled(ipm_handle, 1);
-}
-
-static void notify(struct hil_proc *proc, struct proc_intr *intr_info)
+int platform_kick(struct remoteproc *rproc, uint32_t id)
 {
 	uint32_t dummy_data = 0x12345678; /* Some data must be provided */
-	uint32_t * vring_id;
 
-	if (!intr_info) {
+	if (!rproc) {
 		DEBUG_TRACE("null intr_info\r\n");
-		return;
+		return -EINVAL;
 	}
 
-	vring_id = (uint32_t *)(intr_info->data);
+	DEBUG_TRACE("->%s() for vring %d\n", __func__, id);
+	ipm_send(ipm_handle, 0, id, &dummy_data, sizeof(dummy_data));
 
-	DEBUG_TRACE("->%s() for vring %d\n", __func__, *vring_id);
-	ipm_send(ipm_handle, 0, *vring_id, &dummy_data, sizeof(dummy_data));
+	return 0;
 }
 
-static int boot_cpu(struct hil_proc *proc, unsigned int load_addr)
+struct remoteproc platform_rproc;
+
+static struct remoteproc *platform_init(struct remoteproc_ops *ops, void *priv)
 {
-	DEBUG_TRACE("->%s()\n", __func__);
-	return -1;
+	printk(" %s enter\n", __func__);
+	ipm_handle = device_get_binding("MAILBOX_0");
+	if (!ipm_handle) {
+		return NULL;
+	}
+
+	ipm_register_callback(ipm_handle, platform_ipm_callback, NULL);
+	platform_rproc.priv = priv;
+	
+	return &platform_rproc;
 }
 
-static void shutdown_cpu(struct hil_proc *proc)
+void *platform_mmap (struct remoteproc *rproc,
+		      metal_phys_addr_t *pa, metal_phys_addr_t *da,
+		      size_t size, unsigned int attribute,
+		      struct metal_io_region **io)
 {
+	(void) rproc;
+	(void) size;
+	(void) attribute;
+	
+	printk(" %s enter\n", __func__);
+ 	*io =  &shm_device.regions[RSC_IO_REGION_ID]; 
+	*pa = *da;
+	return (void *)*da;
 }
 
-static int poll(struct hil_proc *proc, int nonblock)
+struct remoteproc_ops platform_rproc_ops = {
+	.init = platform_init,
+	.notify = platform_kick,
+	.mmap = platform_mmap,
+};
+
+struct remoteproc platform_rproc = {
+	.ops = &platform_rproc_ops,
+};
+
+
+int platform_poll(struct virtio_device *vdev)
 {
 	int status ;
 
-	DEBUG_TRACE("->%s(): data_sem %p\n", __func__, &data_sem);
-	status = k_sem_take(&data_sem, nonblock ? K_NO_WAIT : K_FOREVER);
+	status = k_sem_take(&data_sem, K_FOREVER);
 	if (status == 0) {
-		hil_notified(proc, 0xffffffff);
+		rproc_virtio_notified(vdev, vring_notifyid);
 	}
 
 	return status;
 }
-
-static struct metal_io_region *alloc_shm(struct hil_proc *proc,
-					 metal_phys_addr_t physical, size_t size,
-					 struct metal_device **device)
-{
-	int status = metal_device_open("generic", SHM_DEVICE_NAME, device);
-
-	DEBUG_TRACE("->%s(): addr = %d, size =%d,  status %d\n", __func__, physical, size, status);
-	if (status != 0) {
-		return NULL;
-	}
-
-	return metal_device_io_region(*device, 0);
-}
-
-static void release_shm(struct hil_proc *proc, struct metal_device *device,
-			struct metal_io_region *io)
-{
-	DEBUG_TRACE("->%s()\n", __func__);
-	metal_device_close(device);
-}
-
-static int initialize(struct hil_proc *proc)
-{
-	DEBUG_TRACE("->%s()\n", __func__);
-	ipm_handle = device_get_binding("MAILBOX_0");
-	if (!ipm_handle) {
-		return -1;
-	}
-
-	ipm_register_callback(ipm_handle, platform_ipm_callback, NULL);
-	return 0;
-}
-
-static void release(struct hil_proc *proc)
-{
-	DEBUG_TRACE("->%s()\n", __func__);
-	ipm_set_enabled(ipm_handle, 0);
-}
-
-struct hil_platform_ops platform_ops = {
-	.enable_interrupt = enable_interrupt,
-	.notify = notify,
-	.boot_cpu = boot_cpu,
-	.shutdown_cpu = shutdown_cpu,
-	.poll = poll,
-	.alloc_shm = alloc_shm,
-	.release_shm = release_shm,
-	.initialize = initialize,
-	.release = release
-};

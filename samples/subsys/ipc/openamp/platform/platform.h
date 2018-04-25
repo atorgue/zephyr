@@ -21,12 +21,11 @@
 #define VRING_ALIGNMENT         4
 #define VRING_SIZE              32
 
-#elif defined(CONFIG_BOARD_STM32M4_DISCO)
+#elif defined(CONFIG_BOARD_ST)
 
 #define SHM_START_ADDRESS       0x10020000
 #define SHM_SIZE                0x40000
 #define SHM_DEVICE_NAME         "mcusram.shm"
-
 
 #define VRING_COUNT             2
 #define VRING_RX_ADDRESS        0XDEADBEAF
@@ -34,9 +33,17 @@
 #define VRING_ALIGNMENT         0x1000
 #define VRING_SIZE              32
 
+#define SHM_IO_REGION_ID 	0
+#define RSC_IO_REGION_ID 	1
+
 #endif
 
-struct hil_proc *platform_init(int role);
+struct remoteproc *platform_create_proc(int role);
+
+struct  rpmsg_virtio_device *
+platform_create_rpmsg_vdev(struct remoteproc *rproc, unsigned int vdev_index,
+			   unsigned int role,
+			   void (*rst_cb)(struct virtio_device *vdev));
 
 #endif
 
