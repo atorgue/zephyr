@@ -38,12 +38,5 @@
 
 #endif
 
-struct remoteproc *platform_create_proc(int role);
-
-struct  rpmsg_virtio_device *
-platform_create_rpmsg_vdev(struct remoteproc *rproc, unsigned int vdev_index,
-			   unsigned int role,
-			   void (*rst_cb)(struct virtio_device *vdev));
-
 #endif
 
