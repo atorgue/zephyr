@@ -11,7 +11,7 @@
 #if defined(CPU_LPC54114J256BD64_cm4)
 struct lpc_resource_table *rsc_table_ptr = (void *) RSC_TABLE_ADDRESS;
 
-static const struct lpc_resource_table rsc_table = {
+static const struct lpc_resource_table resource_table = {
 	.ver = 1,
 	.num = 2,
 	.offset = {
@@ -29,7 +29,7 @@ extern char ram_console[];
 
 #define __section_t(S)          __attribute__((__section__(#S)))
 #define __resource              __section_t(.resource_table)
-static const struct st_resource_table __resource rsc_table = { \
+static const struct st_resource_table __resource resource_table = { \
 	.ver = 1,
 	.num = 2,
 	.offset = {
@@ -54,12 +54,12 @@ void resource_table_init(void **table_ptr, int *length)
 {
 #if defined(CPU_LPC54114J256BD64_cm4)
 	/* Master: copy the resource table to shared memory. */
-	memcpy(rsc_table_ptr, &rsc_table, sizeof(rsc_table));
+	memcpy(rsc_table_ptr, &resource_table, sizeof(resource_table));
 	*table_ptr = rsc_table_ptr;
 #elif defined(CONFIG_BOARD_ST)
-	*table_ptr = &rsc_table;
+	*table_ptr = &resource_table;
 #endif
 	
-	*length = sizeof(rsc_table);
+	*length = sizeof(resource_table);
 }
 
