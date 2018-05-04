@@ -68,8 +68,8 @@ struct metal_device shm_device = {
  	.bus = "generic",
  	.num_regions = 2,
  	.regions = {
- 		{.name  = "shm"},
-		{.name  = "rsc_table"},
+ 		{.virt = NULL}, /* shared memory */
+		{.virt = NULL}, /* rsc_table memory */
  	},
  	.node = { NULL },
 	.irq_num = 0,
