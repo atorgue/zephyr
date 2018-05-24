@@ -34,9 +34,9 @@ static struct k_thread thread_data;
 
 static K_SEM_DEFINE(message_rcv, 0, 1);
 
-static char rcv_data[256];
+static char rcv_msg[256];
 static volatile unsigned int rcv_len;
-static struct rpmsg_endpoint *tty_ept;
+static struct rpmsg_endpoint tty_ept;
 static struct rpmsg_endpoint *rcv_ept;
 
 static struct virtqueue vq[2];
@@ -57,7 +57,7 @@ static void rpmsg_recv_callback(struct rpmsg_endpoint *ept, void *data,
 {
 	printk("%s:\n", __func__);
 	rcv_ept = ept;
-	memcpy(rcv_data, data, len);
+	memcpy(rcv_msg, data, len);
 	rcv_len = len;
 	k_sem_give(&message_rcv);
 }
@@ -81,7 +81,7 @@ static char *receive_message(struct rpmsg_virtio_device *rvdev)
 	printk("%s:\n", __func__);
 	while (k_sem_take(&message_rcv, K_NO_WAIT) != 0)
 		platform_poll(rvdev->vdev);
-	return rcv_data;
+	return rcv_msg;
 }
 
 static int send_message(char *message)
@@ -95,11 +95,19 @@ static int virtio_notify(void *priv, uint32_t id)
 	uint32_t dummy_data = 0x12345678; /* Some data must be provided */
 	(void)priv;
 	
-	printk(" NAME %s\n", vq->vq_name);
-
 	ipm_send(ipm_handle, 0, id, &dummy_data,
 		 sizeof(dummy_data));
 	return 0;
+}
+static void new_endpoint_cb(struct rpmsg_device *rdev, const char *name,
+			    uint32_t src)
+{
+	printk("%s: unexpected ns service receive for name %s\n",__func__, name);
+#if 0
+	rpmsg_create_ept(&tty_ept2, &rvdev.rdev, name, 
+				   RPMSG_ADDR_ANY, src,
+			           rpmsg_recv_callback, NULL);
+#endif
 }
 
 void app_task(void *arg1, void *arg2, void *arg3)
@@ -112,29 +120,22 @@ void app_task(void *arg1, void *arg2, void *arg3)
 	struct fw_rsc_vdev_vring *vring_rsc;
 	void* rsc_tab_addr;
 	unsigned char *msg;
-
+//	struct metal_init_params metal_params = METAL_INIT_DEFAULTS;
+	
 	printk("\r\nOpenAMP demo started\r\n");
-
-	struct metal_init_params metal_params = METAL_INIT_DEFAULTS;
 
 	resource_table_init(&rsc_tab_addr, &rsc_size);
 	rsc_table = (struct st_resource_table *)rsc_tab_addr;
 	
-	metal_init(&metal_params);
-
-	printk("metal init\n");
+//	metal_init(&metal_params);
+	metal_init();
 
 	status = metal_register_generic_device(&shm_device);
 	if (status != 0) {
 		printk("metal_register_generic_device(): could not register shared memory device: error code %d\n", status);
 	}
 
-	printk("metal_register\n");
-
         status = metal_device_open("generic", SHM_DEVICE_NAME, &device);
-
-	printk("device open %d\n", status);
-
         if (status != 0) {
                 printk("metal_device_open failed %d\n", status);
         }
@@ -178,12 +179,17 @@ void app_task(void *arg1, void *arg2, void *arg3)
 					      rsc_io, vring_rsc->num, 
 						vring_rsc->align);
 	printk("rpmsg_init_vdev\n");
-	rpmsg_init_vdev(&rvdev, vdev, shm_io, (void *)SHM_START_ADDRESS,
-			SHM_SIZE);
+	rpmsg_init_vdev(&rvdev, vdev, &new_endpoint_cb,
+			shm_io, (void *)SHM_START_ADDRESS, SHM_SIZE);
 
+	k_sleep(500);
 	printk("rpmsg_create_ept\n");
-	tty_ept = rpmsg_create_ept(&rvdev, RPMSG_CHAN_NAME, RPMSG_ADDR_ANY,
-				   RPMSG_ADDR_ANY, rpmsg_recv_callback, NULL);
+	status = rpmsg_create_ept(&tty_ept, &rvdev.rdev, RPMSG_CHAN_NAME, 
+				   RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
+			           rpmsg_recv_callback, NULL);
+	if( status != 0 )
+		printk("error while creating endpoint(%x)\n", status);
+		
 	printk("wait receive\n");
 	while(10)
 	{
