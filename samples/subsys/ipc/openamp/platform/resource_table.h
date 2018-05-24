@@ -26,7 +26,7 @@ struct lpc_resource_table {
 	struct fw_rsc_vdev_vring vring0, vring1;
 } OPENAMP_PACKED_END;
 
-#elif defined(CONFIG_BOARD_ST)
+#else
 
 OPENAMP_PACKED_BEGIN
 struct st_resource_table { 

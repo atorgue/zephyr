@@ -23,7 +23,7 @@ static const struct lpc_resource_table resource_table = {
 	.vring0 = { VRING_TX_ADDRESS, VRING_ALIGNMENT, VRING_SIZE, VRING_TX_ID, 0 },
 	.vring1 = { VRING_RX_ADDRESS, VRING_ALIGNMENT, VRING_SIZE, VRING_RX_ID, 0 },
 };
-#elif defined(CONFIG_BOARD_ST)
+#else
 
 extern char ram_console[];
 
@@ -45,7 +45,7 @@ static const struct st_resource_table __resource resource_table = { \
 	.vring1 = { VRING_RX_ADDRESS, VRING_ALIGNMENT, VRING_SIZE, 2, 0 },
 	.cm_trace = {
 		RSC_TRACE,
-		(uint32_t)ram_console, CONFIG_RAM_CONSOLE_BUFFER_SIZE + 1, 0, "cm4_log",
+		(uint32_t)ram_console, 0X10000 + 1, 0, "cm4_log",
 	},
 };
 #endif

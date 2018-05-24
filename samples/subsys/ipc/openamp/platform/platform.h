@@ -21,7 +21,7 @@
 #define VRING_ALIGNMENT         4
 #define VRING_SIZE              32
 
-#elif defined(CONFIG_BOARD_ST)
+#else
 
 #define SHM_START_ADDRESS       0x10020000
 #define SHM_SIZE                0x40000
