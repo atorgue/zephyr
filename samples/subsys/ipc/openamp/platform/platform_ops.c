@@ -24,18 +24,27 @@ static unsigned int vring_notifyid;
 
 void platform_ipm_callback(void *context, u32_t id, volatile void *data)
 {
-	vring_notifyid = id ? VRING_RX_ID : VRING_TX_ID;
-	k_sem_give(&data_sem);
+	vring_notifyid |=  1 << id;
+	if (k_sem_count_get(&data_sem) < 2);
+		k_sem_give(&data_sem);
 }
 
 int platform_poll(struct virtio_device *vdev)
 {
 	int status ;
-
-	printk("->%s(): vring_notifyid %d\n", __func__, vring_notifyid);
+	unsigned int id_mask;
+	
 	status = k_sem_take(&data_sem, K_FOREVER);
-	if (status == 0) {
-		rproc_virtio_notified(vdev, vring_notifyid);
+	if (!status && vring_notifyid) {
+		id_mask = vring_notifyid;
+		vring_notifyid = 0;
+
+		if (id_mask & (1 << VRING_TX_ID)) {
+			rproc_virtio_notified(vdev, VRING_TX_ID);
+		}
+		if (id_mask &  (1 << VRING_RX_ID)) {
+			rproc_virtio_notified(vdev, VRING_RX_ID);
+		}
 	}
 
 	return status;
