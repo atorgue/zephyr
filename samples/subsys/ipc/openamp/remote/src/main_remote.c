@@ -39,7 +39,6 @@ static volatile unsigned int rcv_len;
 static struct rpmsg_endpoint tty_ept;
 static struct rpmsg_endpoint *rcv_ept;
 
-static struct virtqueue vq[2];
 static struct virtio_device *vdev;
 static struct rpmsg_virtio_device rvdev;
 static struct metal_io_region *shm_io;
@@ -47,6 +46,7 @@ static struct metal_io_region *rsc_io;
 static struct st_resource_table *rsc_table;
 static int rsc_size;
 static struct device *ipm_handle = NULL;
+static struct rpmsg_virtio_shm_pool shpool;
 
 extern int platform_kick(struct remoteproc *rproc, uint32_t id);
 extern int platform_poll(struct virtio_device *vdev);
@@ -65,7 +65,7 @@ static void rpmsg_recv_callback(struct rpmsg_endpoint *ept, void *data,
 static metal_phys_addr_t shm_physmap[] = { SHM_START_ADDRESS };
 struct metal_device shm_device = {
  	.name = SHM_DEVICE_NAME,
- 	.bus = "generic",
+// 	.bus.name = "generic",
  	.num_regions = 2,
  	.regions = {
  		{.virt = NULL}, /* shared memory */
@@ -140,7 +140,7 @@ void app_task(void *arg1, void *arg2, void *arg3)
                 printk("metal_device_open failed %d\n", status);
         }
 
- 	metal_io_init(&device->regions[0], 
+	metal_io_init(&device->regions[0],
 		      (void *)SHM_START_ADDRESS,
 		      shm_physmap, SHM_SIZE, -1, 0, NULL);
 
@@ -179,8 +179,10 @@ void app_task(void *arg1, void *arg2, void *arg3)
 					      rsc_io, vring_rsc->num, 
 						vring_rsc->align);
 	printk("rpmsg_init_vdev\n");
+	rpmsg_virtio_init_shm_pool(&shpool, (void *)SHM_START_ADDRESS,
+				   (size_t)SHM_SIZE);
 	rpmsg_init_vdev(&rvdev, vdev, &new_endpoint_cb,
-			shm_io, (void *)SHM_START_ADDRESS, SHM_SIZE);
+			shm_io, &shpool);
 
 	k_sleep(500);
 	printk("rpmsg_create_ept\n");
