@@ -15,9 +15,11 @@ project(NONE)
 target_include_directories(app PRIVATE $ENV{ZEPHYR_BASE}/drivers)
 target_include_directories(app PRIVATE ${LIBMETAL_INCLUDE_DIR} ${OPENAMP_INCLUDE_DIR} ${PLATFORM_DIR})
 
-target_sources(app PRIVATE src/main_remote.c ${PLATFORM_DIR}/resource_table.c ${PLATFORM_DIR}/platform_ops.c)
+target_sources(app PRIVATE src/main_remote.c ${PLATFORM_DIR}/resource_table.c ${PLATFORM_DIR}/platform_info.c)
 target_link_libraries(app
 	${OPENAMP_LIBRARY}
 	${LIBMETAL_LIBRARY}
 	${ZEPHYR_KERNEL_LIBRARY})
 
+ add_definitions (-DMETAL_MAX_DEVICE_REGIONS=2)
+ add_definitions (-DVIRTIO_SLAVE_ONLY)
