@@ -1,0 +1,7 @@
+identifier: stm32mp157c_dk2
+name: STM32MP157C_DK2
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+  - gccarmemb
